@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GSCO Extraction Toolkit — Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <div class="bg-grid"></div>
+  <div class="noise"></div>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-icon">⬡</span>
+      <span>GSCO <strong>Extraction Toolkit</strong></span>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="nav-item active">Extractor</a>
+      <a href="/results" class="nav-item">Results</a>
+      <a href="/graph" class="nav-item">Graph Assistant</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- HEADER -->
+    <header class="page-header">
+      <h1>PDF Extraction Pipeline</h1>
+      <p class="subtitle">Upload a PDF, configure your LLM prompts, and extract structured supply chain facts.</p>
+    </header>
+
+    <!-- ROW 1: Upload + Model -->
+    <div class="card-row">
+      <!-- Upload -->
+      <div class="card glass" id="uploadCard">
+        <div class="card-head">
+          <span class="card-icon">📄</span>
+          <h2>PDF Document</h2>
+        </div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept=".pdf" hidden />
+          <div class="drop-content">
+            <div class="drop-icon">⬆</div>
+            <p>Drag & drop a PDF here</p>
+            <span>or</span>
+            <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Browse File</button>
+          </div>
+          <div class="file-selected hidden" id="fileSelected">
+            <span class="file-icon">📋</span>
+            <span id="selectedFileName">—</span>
+            <button class="btn-icon" onclick="clearFile()" title="Remove">✕</button>
+          </div>
+        </div>
+        <div id="uploadStatus" class="upload-status hidden"></div>
+      </div>
+
+      <!-- Model -->
+      <div class="card glass" id="modelCard">
+        <div class="card-head">
+          <span class="card-icon">🤖</span>
+          <h2>LLM Model</h2>
+        </div>
+        <div class="field-group">
+          <label for="modelSelect">Ollama Model</label>
+          <select id="modelSelect" class="select">
+            <option value="deepseek-v3.1:671b-cloud">deepseek-v3.1:671b-cloud</option>
+          </select>
+          <span class="field-hint" id="ollamaStatus">Checking Ollama…</span>
+        </div>
+        <div class="field-group" style="margin-top:1.5rem">
+          <label>Ollama Connection</label>
+          <div class="status-badge" id="ollamaBadge">
+            <span class="pulse"></span>
+            <span id="ollamaBadgeText">Connecting…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPTS -->
+    <div class="card glass prompt-card">
+      <div class="card-head between">
+        <div class="flex-row">
+          <span class="card-icon">✏️</span>
+          <h2>Prompt Configuration</h2>
+        </div>
+        <div class="flex-row gap-8">
+          <button class="btn btn-ghost" onclick="resetPrompts()">Reset to defaults</button>
+          <button class="btn btn-secondary" id="savePromptsBtn" onclick="savePrompts()">Save Prompts</button>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab active" data-tab="triage" onclick="switchTab(this,'triage')">Page Triage</button>
+        <button class="tab" data-tab="graph" onclick="switchTab(this,'graph')">Graph Extraction</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-triage">
+        <label class="prompt-label">System prompt to triage the page and suggest an extraction mode.</label>
+        <textarea id="triagePrompt" class="prompt-area" spellcheck="false" rows="14"></textarea>
+      </div>
+      <div class="tab-panel" id="tab-graph">
+        <label class="prompt-label">Main system prompt to extract graph triples and attributes from the content.</label>
+        <textarea id="graphPrompt" class="prompt-area" spellcheck="false" rows="14"></textarea>
+      </div>
+
+    </div>
+
+    <!-- RUN + PROGRESS -->
+    <div class="card glass run-card">
+      <div class="card-head between">
+        <div class="flex-row">
+          <span class="card-icon">▶</span>
+          <h2>Run Extraction</h2>
+        </div>
+        <button class="btn btn-primary btn-lg" id="runBtn" onclick="runPipeline()">
+          <span class="btn-text">Start Pipeline</span>
+        </button>
+      </div>
+
+      <!-- Progress -->
+      <div id="progressSection" class="hidden">
+        <div class="progress-header">
+          <span id="progressLabel">Initialising…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="stats-row">
+          <div class="stat"><span class="stat-val" id="statFacts">0</span><span class="stat-key">Facts extracted</span>
+          </div>
+          <div class="stat"><span class="stat-val" id="statStatus">—</span><span class="stat-key">Status</span></div>
+        </div>
+      </div>
+
+      <!-- Log console -->
+      <div class="log-console hidden" id="logConsole">
+        <div class="log-header">
+          <span>Live Log</span>
+          <button class="btn-icon" onclick="clearLog()">Clear</button>
+        </div>
+        <div class="log-lines" id="logLines"></div>
+      </div>
+
+      <!-- Done banner -->
+      <div class="done-banner hidden" id="doneBanner">
+        <span class="done-icon">✓</span>
+        <div>
+          <strong>Extraction complete!</strong>
+          <p id="doneSummary"></p>
+        </div>
+        <a href="/results" id="viewResultsBtn" class="btn btn-primary">View Results →</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+
+</html>

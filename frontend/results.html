@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GSCO Extraction Toolkit — Results</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+    <div class="bg-grid"></div>
+    <div class="noise"></div>
+
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="nav-icon">⬡</span>
+            <span>GSCO <strong>Extraction Toolkit</strong></span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Control Panel</a>
+            <a href="/results" class="nav-link active">Results</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header between">
+            <div>
+                <h1>Extracted Facts</h1>
+                <p class="subtitle" id="resultsMeta">Loading results…</p>
+            </div>
+            <div class="flex-row gap-8">
+                <button class="btn btn-outline" onclick="downloadCSV()">⬇ Download CSV</button>
+                <a href="/" class="btn btn-ghost">← Control Panel</a>
+            </div>
+        </header>
+
+        <!-- Document Summary -->
+        <div id="docInsight" class="card glass hidden" style="margin-bottom: 2rem;">
+            <div class="card-head">
+                <span class="card-icon">💡</span>
+                <h2>Document Insights</h2>
+            </div>
+            <div style="padding: 0 1.5rem 1.5rem;">
+                <h4 style="margin-bottom:0.5rem; color:var(--primary);">Summary</h4>
+                <p id="docSummary" style="color:var(--text-body); line-height:1.6;"></p>
+                <h4 style="margin:1.5rem 0 0.5rem; color:var(--text-dim);">Limitations & Context</h4>
+                <p id="docLimitations" style="color:var(--text-dim); line-height:1.6;"></p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card glass filter-card">
+            <div class="filter-row">
+                <div class="field-group">
+                    <label for="filterStage">Stage</label>
+                    <select id="filterStage" class="select sm" onchange="applyFilters()">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="filterChain">Value Chain</label>
+                    <select id="filterChain" class="select sm" onchange="applyFilters()">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label for="filterFactType">Fact Type</label>
+                    <select id="filterFactType" class="select sm" onchange="applyFilters()">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="field-group search-group">
+                    <label for="searchBox">Search</label>
+                    <input id="searchBox" class="input sm" type="text" placeholder="Search all fields…"
+                        oninput="applyFilters()" />
+                </div>
+                <button class="btn btn-ghost sm" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Results table -->
+        <div class="card glass table-card">
+            <div id="noResults" class="empty-state hidden">
+                <div class="empty-icon">🔍</div>
+                <p>No facts match your current filters.</p>
+            </div>
+            <div id="loadingState" class="empty-state">
+                <div class="spinner"></div>
+                <p>Loading results…</p>
+            </div>
+            <div class="table-wrapper hidden" id="tableWrapper">
+                <table class="data-table" id="factsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Stage</th>
+                            <th>Chain</th>
+                            <th>Fact Type</th>
+                            <th>Subject</th>
+                            <th>Relation</th>
+                            <th>Object</th>
+                            <th>Confidence</th>
+                            <th>Evidence</th>
+                            <th>Page</th>
+                        </tr>
+                    </thead>
+                    <tbody id="factsBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+
+</html>

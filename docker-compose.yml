@@ -1,0 +1,69 @@
+services:
+  gsco-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gsco_extraction
+    ports:
+      - "5050:5050"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./output:/app/output
+      - ./prompts_config.json:/app/prompts_config.json
+    environment:
+      - PORT=5050
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=deepseek-v3.1:671b-cloud
+      - OUTPUT_DIR=/app/output
+      - UPLOAD_DIR=/app/uploads
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: neo4j_extracted_db
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=none
+    volumes:
+      - ./neo4j_data:/data
+      - ./neo4j_logs:/logs
+    restart: unless-stopped
+
+  graph_ingester:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gsco_graph_ingester
+    command: python graph_run.py
+    depends_on:
+      - neo4j
+    volumes:
+      - ./output:/app/output
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - OUTPUT_DIR=/app/output
+    restart: unless-stopped
+
+  graph_query:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gsco_graph_query
+    command: python query_api.py
+    ports:
+      - "5051:5051"
+    depends_on:
+      - neo4j
+      - gsco-backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - PORT=5051
+      - NEO4J_URI=bolt://neo4j:7687
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=deepseek-v3.1:671b-cloud
+    restart: unless-stopped

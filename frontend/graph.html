@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Graph Assistant - Completeness Scoring</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --border: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #10b981;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --font: 'Inter', system-ui, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-item {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Query Input */
+        .query-box {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .query-input {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .query-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Results */
+        #resultsArea {
+            display: none;
+            gap: 1.5rem;
+            flex-direction: column;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+        }
+
+        /* Header & Scores */
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .node-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .node-type {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        .score-group {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .score-box {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            min-width: 120px;
+        }
+
+        .score-val {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .score-val.moderate {
+            color: var(--warn);
+        }
+
+        .score-val.low {
+            color: var(--danger);
+        }
+
+        .score-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        /* Warnings */
+        .warnings {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .warning-item {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warn);
+            padding: 0.75rem 1rem;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.9rem;
+        }
+
+        .warning-item.danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: var(--danger);
+        }
+
+        /* Data Layout */
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .attr-list,
+        .rel-list {
+            list-style: none;
+        }
+
+        .attr-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .attr-item:last-child {
+            border-bottom: none;
+        }
+
+        .attr-key {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: capitalize;
+        }
+
+        .attr-val {
+            font-weight: 500;
+            font-size: 1.05rem;
+        }
+
+        .rel-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .rel-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .rel-type {
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .rel-target {
+            font-weight: 600;
+        }
+
+        .rel-evidence {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            border-left: 2px solid var(--border);
+            padding-left: 0.75rem;
+            font-style: italic;
+        }
+
+        /* Loading */
+        .loader {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <nav>
+            <div class="brand">
+                <span>🌐</span>
+                <span>Graph <strong>Intelligence</strong></span>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="nav-item">Extractor</a>
+                <a href="/results" class="nav-item">Results</a>
+                <a href="/graph" class="nav-item active">Graph Assistant</a>
+            </div>
+        </nav>
+
+        <div class="query-box">
+            <input type="text" id="queryInput" class="query-input"
+                placeholder="Ask a question about the graph (e.g., 'What do we know about the DRC?')"
+                onkeyup="if(event.key === 'Enter') executeQuery()">
+            <button class="btn" id="queryBtn" onclick="executeQuery()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Query
+            </button>
+        </div>
+
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <span>Analyzing knowledge graph...</span>
+        </div>
+
+        <div id="resultsArea">
+            <!-- Injected by JS -->
+        </div>
+
+    </div>
+
+    <script>
+        // Point this to the correct origin depending on deployment, but we use the query API container at :5051
+        const API_URL = "http://localhost:5051/api/query";
+
+        function getScoreClass(score) {
+            if (score >= 75) return '';
+            if (score >= 50) return 'moderate';
+            return 'low';
+        }
+
+        async function executeQuery() {
+            const input = document.getElementById('queryInput');
+            const btn = document.getElementById('queryBtn');
+            const loader = document.getElementById('loader');
+            const resultsArea = document.getElementById('resultsArea');
+
+            const question = input.value.trim();
+            if (!question) return;
+
+            input.disabled = true;
+            btn.disabled = true;
+            resultsArea.style.display = 'none';
+            loader.style.display = 'flex';
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await res.json();
+                renderResults(data);
+
+            } catch (err) {
+                resultsArea.style.display = 'flex';
+                resultsArea.innerHTML = `<div class="card"><div class="warning-item danger">Failed to connect to the Graph Intelligence API: ${err.message}</div></div>`;
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        function renderResults(data) {
+            const area = document.getElementById('resultsArea');
+
+            if (!data.found || !data.information_completeness) {
+                area.style.display = 'flex';
+                area.innerHTML = `
+          <div class="card">
+            <div class="warning-item danger">
+              ${data.message || 'No matching records found in the Graph Database.'}
+            </div>
+          </div>
+        `;
+                return;
+            }
+
+            const m = data.information_completeness;
+            const oScore = getScoreClass(m.overall_score);
+
+            let warningsHtml = '';
+            if (data.warnings && data.warnings.length > 0) {
+                warningsHtml = `<div class="warnings">` +
+                    data.warnings.map(w => `<div class="warning-item ${w.includes('❌') ? 'danger' : ''}">${w}</div>`).join('') +
+                    `</div>`;
+            }
+
+            let attrsHtml = Object.entries(data.attributes || {}).map(([k, v]) => {
+                const val = Array.isArray(v) ? v.join(', ') : v;
+                return `<li class="attr-item"><span class="attr-key">${k.replace(/_/g, ' ')}</span><span class="attr-val">${val}</span></li>`;
+            }).join('');
+
+            let relsHtml = (data.relationships || []).map(r => `
+        <div class="rel-item">
+          <div class="rel-header">
+            <span class="rel-type">[:${r.type}]</span>
+            <span class="rel-target">${r.target_type}: ${r.target_name}</span>
+          </div>
+          <div class="rel-evidence">"${r.evidence || 'Inferred relationship'}"</div>
+        </div>
+      `).join('');
+            if (!relsHtml) relsHtml = '<div class="text-muted">No relationships extracted yet.</div>';
+
+            area.style.display = 'flex';
+            area.innerHTML = `
+        <div class="card">
+          <div class="node-header">
+            <div>
+              <div class="node-title">${data.node_name}</div>
+              <div class="node-type">${data.node_type} Node</div>
+            </div>
+            <div class="score-group">
+              <div class="score-box">
+                <div class="score-val ${oScore}">${m.overall_score.toFixed(1)}</div>
+                <div class="score-label">Overall Quality</div>
+              </div>
+              <div class="score-box">
+                <div class="score-val ${getScoreClass(m.completeness_score)}">${m.completeness_score.toFixed(1)}%</div>
+                <div class="score-label">Completeness</div>
+              </div>
+              <div class="score-box">
+                <div class="score-val ${getScoreClass(m.source_quality)}">${typeof m.source_quality === 'number' ? m.source_quality.toFixed(1) : m.source_quality}</div>
+                <div class="score-label">Source Reliability</div>
+              </div>
+            </div>
+          </div>
+          
+          ${warningsHtml}
+
+          <div class="data-grid">
+            <div>
+              <h3>Extracted Attributes</h3>
+              <ul class="attr-list">
+                ${attrsHtml}
+              </ul>
+            </div>
+            <div>
+              <h3>Validated Relationships</h3>
+              <div class="rel-list">
+                ${relsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+        }
+    </script>
+</body>
+
+</html>
